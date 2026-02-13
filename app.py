@@ -6,7 +6,7 @@ from database import SessionLocal, engine, Base
 from models import User, Task
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.staticfiles import StaticFiles
 
 
 Base.metadata.create_all(bind=engine) #this creates tables
@@ -14,6 +14,7 @@ Base.metadata.create_all(bind=engine) #this creates tables
 app=FastAPI()
 templates=Jinja2Templates(directory="templates")
 pwd_context=CryptContext(schemes=["bcrypt"], deprecated="auto")
+app.mount("/static", StaticFiles(directory="static"),name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +47,7 @@ def register(
     db: Session =Depends(get_db)
 ):
     if db.query(User).filter(User.username==username).first():
-        return templates.TemplatesResponse(
+        return templates.TemplateResponse(
             "register.html",{"request": request, "error":"Username already exists"}
         )
     
@@ -95,7 +96,8 @@ def read_index(
     user_id=request.cookies.get("user_id")
     user=None
     tasks=[] 
-
+    if not user_id:
+        return RedirectResponse(url="/login",status_code=303)
     if user_id:
         user=db.query(User).filter(User.id==int(user_id)).first()
         if user:
